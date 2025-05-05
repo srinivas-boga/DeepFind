@@ -1,8 +1,9 @@
-
 import os
 import re
 import fitz
 import docx
+
+from embeddings import Embeddings
 
 def parseDir(path):
     """
@@ -101,14 +102,22 @@ def parseMD(file):
     return text
 
 
-def parseFiles(files):
-    chunks = []
+def embedFiles(files, embedding: Embeddings):
+    """
+    Embed the files using the specified embedding model.
+    Args:
+        files (list): A list of files to embed.
+        embedding (Embeddings): The embedding model to use.
+    Returns:
+        dict: A dictionary with filenames as keys and embeddings as values.
+    """
     for file in files:
         text = parseFile(file)
         paragraphs = extractParagraphs(text)
-        for paragraph in paragraphs:
-            chunks.append(paragraph)
-    return chunks
+        embeddings = embedding.get_embeddings(paragraphs)
+        # Store the embeddings in a database or file
+        embedding.save_embeddings(embeddings, file)
+    return 
 
 
 
@@ -128,7 +137,17 @@ if __name__ == "__main__":
     # Example usage in the current directory
     path = "./"
     files = parseDir(path)
-    chunks = parseFiles(files)
-    for chunk in chunks:
-        print(chunk)
-        print("="*80)
+    embedding = Embeddings(model_name="all-MiniLM-L6-v2", db_path="embeddings.db")
+    embedFiles(files, embedding)
+
+    print("Parsed files:")
+    for file in files:
+        print(file)
+
+    # search for a query
+    query = "LLM powered chatbots"
+    results = embedding.search_embeddings(query, top_k=4)
+
+    print("Top 4 results for query '{}':".format(query))
+    for result in results:
+        print(result)
